@@ -1,0 +1,14 @@
+path: ../dataset
+train: train/images
+val: val/images
+test: test/images
+
+nc: 7
+names:
+  0: scratch
+  1: dent
+  2: crack
+  3: shattered
+  4: broken_lamp
+  5: flat_tire
+  6: missing_part

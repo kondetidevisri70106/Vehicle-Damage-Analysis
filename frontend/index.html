@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vehicle Damage Analysis — Multi-Vehicle Assessment Platform</title>
+<meta name="description" content="Multi-vehicle damage assessment for cars, bikes, trucks, and buses. Multi-view detection, hidden-damage risk prediction, IoT sensor fusion, and insurance-ready reporting." />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#8b5cf6" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: { 950: '#0a0916', 900: '#120f24', 850: '#17132e', 800: '#1e1938', 700: '#2a2350', 600: '#3a3370', 500: '#4c4490' },
+          electric: { 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#6d28d9' },
+          neon: { 400: '#2dd4bf', 500: '#14b8a6' },
+          warm: { 400: '#fbbf24', 500: '#f59e0b' },
+          success: '#22c55e', warning: '#f59e0b', danger: '#ef4444', critical: '#dc2626',
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
+        },
+        boxShadow: {
+          glow: '0 0 40px -10px rgba(139,92,246,0.4)',
+          card: '0 10px 40px -10px rgba(0,0,0,0.5)',
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-ink-950 text-slate-200 font-sans antialiased overflow-x-hidden">
+
+<!-- ============ BACKGROUND DECOR ============ -->
+<div class="bg-decor" aria-hidden="true">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-grid"></div>
+</div>
+
+<!-- ============ STICKY NAVBAR ============ -->
+<header id="navbar" class="navbar">
+  <nav class="nav-container" aria-label="Primary">
+    <a href="#dashboard" class="brand" aria-label="Vehicle Damage Analysis home">
+      <svg viewBox="0 0 40 40" class="brand-logo" aria-hidden="true">
+        <defs>
+          <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#e9d5ff"/>
+          </linearGradient>
+        </defs>
+        <path d="M20 3 L34 9 v10 c0 9-6 15-14 18 C12 34 6 28 6 19 V9 Z"
+              fill="#ffffff" opacity="0.15"/>
+        <path d="M20 3 L34 9 v10 c0 9-6 15-14 18 C12 34 6 28 6 19 V9 Z"
+              fill="none" stroke="url(#brandGrad)" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M10 22 l1.5-4 a2 2 0 0 1 2-1.5 h6 a2 2 0 0 1 2 1.5 l1.5 4 v3 h-2 v-1 H12 v1 h-2 z"
+              fill="#ffffff" opacity="0.9"/>
+        <circle cx="12.5" cy="25" r="1.2" fill="#8b5cf6"/>
+        <circle cx="19.5" cy="25" r="1.2" fill="#8b5cf6"/>
+        <circle cx="26" cy="25" r="3" fill="none" stroke="#ffffff" stroke-width="1.4"/>
+        <circle cx="32" cy="25" r="3" fill="none" stroke="#ffffff" stroke-width="1.4"/>
+        <path d="M26 25 L29 20 L31 20 L32 25" fill="none" stroke="#ffffff" stroke-width="1.4"/>
+        <path d="M17 12 l2 2 l4-4" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">Vehicle <span class="text-electric-300">Damage</span> Analysis</span>
+        <span class="brand-tag">Multi-Vehicle Assessment</span>
+      </div>
+    </a>
+
+    <ul class="nav-links" role="menubar">
+      <li><a href="#dashboard" class="nav-link" role="menuitem">Dashboard</a></li>
+      <li><a href="#inspection" class="nav-link" role="menuitem">Inspection</a></li>
+      <li><a href="#analysis" class="nav-link" role="menuitem">Damage Analysis</a></li>
+      <li><a href="#iot" class="nav-link" role="menuitem">IoT Sensors</a></li>
+      <li><a href="#reports" class="nav-link" role="menuitem">Reports</a></li>
+      <li><a href="#about" class="nav-link" role="menuitem">About</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <div class="nav-search" role="search">
+        <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><path d="M10 4a6 6 0 1 0 3.6 10.8l4.3 4.2 1.4-1.4-4.2-4.3A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" fill="currentColor"/></svg>
+        <input id="globalSearch" type="search" placeholder="Search inspections, vehicles, reports..." aria-label="Global search" />
+      </div>
+
+      <div class="vehicle-selector">
+        <label for="vehicleType" class="vs-label">
+          <svg viewBox="0 0 24 24" class="vs-icon"><path d="M5 11l1.5-5A2 2 0 0 1 8.4 4.5h7.2A2 2 0 0 1 17.5 6L19 11v7h-2v-2H7v2H5v-7z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="14" r="1.5" fill="currentColor"/><circle cx="15.5" cy="14" r="1.5" fill="currentColor"/></svg>
+          Vehicle Type
+        </label>
+        <select id="vehicleType" class="vs-select">
+          <option value="">— Select vehicle type —</option>
+          <option value="car_hatchback">🚗 Car · Hatchback</option>
+          <option value="car_sedan">🚙 Car · Sedan</option>
+          <option value="car_suv">🚐 Car · SUV</option>
+          <option value="car_luxury">🏎 Car · Luxury</option>
+          <option value="bike">🏍 Bike / Motorcycle</option>
+          <option value="scooter">🛵 Scooter</option>
+          <option value="auto_rickshaw">🛺 Auto Rickshaw</option>
+          <option value="truck">🚚 Truck</option>
+          <option value="bus">🚌 Bus</option>
+          <option value="commercial">🚛 Commercial Vehicle</option>
+        </select>
+      </div>
+
+      <div class="dropdown">
+        <button class="icon-btn" id="notifBtn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-5v-1l-1.5-1.5V10a5.5 5.5 0 0 0-4.25-5.36V4a1.25 1.25 0 1 0-2.5 0v.64A5.5 5.5 0 0 0 6.5 10v4.5L5 16v1h14z" fill="currentColor"/></svg>
+          <span class="badge-dot">3</span>
+        </button>
+        <div class="dropdown-menu" id="notifMenu" role="menu">
+          <div class="dropdown-header">Notifications</div>
+          <a href="#" class="dropdown-item" role="menuitem">
+            <div class="dot dot-electric"></div>
+            <div><div class="dd-title">New inspection INS-1025 received</div><div class="dd-sub">2 minutes ago</div></div>
+          </a>
+          <a href="#" class="dropdown-item" role="menuitem">
+            <div class="dot dot-warning"></div>
+            <div><div class="dd-title">High hidden-damage risk detected</div><div class="dd-sub">18 minutes ago</div></div>
+          </a>
+          <a href="#" class="dropdown-item" role="menuitem">
+            <div class="dot dot-success"></div>
+            <div><div class="dd-title">Report INS-1023 generated</div><div class="dd-sub">1 hour ago</div></div>
+          </a>
+        </div>
+      </div>
+
+      <div class="server-status" id="serverStatus" role="status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting…</span>
+      </div>
+
+      <div class="dropdown">
+        <button class="profile-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false" aria-label="User profile">
+          <span class="avatar" id="userAvatar">?</span>
+          <span class="profile-meta">
+            <span class="profile-name" id="userName">Guest</span>
+            <span class="profile-role" id="userRole">Not signed in</span>
+          </span>
+          <svg viewBox="0 0 24 24" class="chev" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="dropdown-menu" id="profileMenu" role="menu">
+          <div class="dropdown-header">Account</div>
+          <a href="#" class="dropdown-item" role="menuitem">My Profile</a>
+          <a href="#reports" class="dropdown-item" role="menuitem">Inspection History</a>
+          <a href="#" class="dropdown-item" id="loginMenuItem" role="menuitem">Sign In</a>
+          <a href="#" class="dropdown-item" role="menuitem">Settings</a>
+          <a href="#" class="dropdown-item" role="menuitem">Help &amp; Support</a>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item danger" id="logoutMenuItem" role="menuitem">Logout</a>
+        </div>
+      </div>
+
+      <button class="icon-btn hamburger" id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mobile-drawer" id="mobileDrawer">
+    <a href="#dashboard" class="mobile-link">Dashboard</a>
+    <a href="#inspection" class="mobile-link">Inspection</a>
+    <a href="#analysis" class="mobile-link">Damage Analysis</a>
+    <a href="#iot" class="mobile-link">IoT Sensors</a>
+    <a href="#reports" class="mobile-link">Reports</a>
+    <a href="#about" class="mobile-link">About</a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section id="dashboard" class="hero">
+  <div class="hero-grid container-wide">
+    <div class="hero-copy">
+      <div class="hero-pill">
+        <span class="pulse-dot"></span>
+        Multi-Vehicle Detection Engine · Live
+      </div>
+      <h1 class="hero-title">
+        Multi-Vehicle <span class="grad-text">Damage Assessment</span> Platform
+      </h1>
+      <p class="hero-sub">
+        Detect visible damage, estimate hidden-damage risk, analyze IoT sensor data, and
+        generate repair recommendations — for cars, bikes, trucks, buses, and every vehicle type.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="#inspection" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8l3 3M5 19l3-3m8-8l3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Start New Inspection
+        </a>
+        <a href="#reports" class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M4 4h11l5 5v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm10 1v5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          View Previous Reports
+        </a>
+      </div>
+
+      <a href="#how" class="hero-link">
+        How It Works
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </a>
+    </div>
+
+    <div class="hero-mock">
+      <div class="mock-frame">
+        <div class="mock-topbar">
+          <span class="mock-tab active">Damage View</span>
+          <span class="mock-tab">Report</span>
+          <span class="mock-tab">Sensors</span>
+          <span class="mock-ai">
+            <span class="pulse-dot small"></span> Detection: Active
+          </span>
+        </div>
+
+        <div class="mock-body">
+          <div class="mock-visual" id="mockVehicle">
+            <svg viewBox="0 0 320 200" class="vehicle-svg" aria-hidden="true">
+              <defs>
+                <linearGradient id="fleetBg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#1c1a44"/>
+                  <stop offset="100%" stop-color="#0a0916"/>
+                </linearGradient>
+              </defs>
+              <rect x="6" y="10" width="308" height="180" rx="14" fill="url(#fleetBg)" opacity="0.55"/>
+
+              <g transform="translate(20, 30)">
+                <path d="M0 30 l3-12 a4 4 0 0 1 4-3 h44 a4 4 0 0 1 4 3 l3 12 v10 h-3 v-4 H3 v4 H0 z"
+                      fill="#17132e" stroke="#8b5cf6" stroke-width="1.4"/>
+                <circle cx="10" cy="40" r="4.5" fill="#0a0916" stroke="#8b5cf6" stroke-width="1.4"/>
+                <circle cx="44" cy="40" r="4.5" fill="#0a0916" stroke="#8b5cf6" stroke-width="1.4"/>
+                <rect x="8" y="18" width="14" height="10" rx="2" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>
+                <rect x="30" y="20" width="12" height="8" rx="2" fill="rgba(245,158,11,0.18)" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 2"/>
+                <text x="0" y="60" font-size="7.5" fill="#a78bfa" font-family="Inter" font-weight="600">CAR</text>
+              </g>
+
+              <g transform="translate(180, 35)">
+                <circle cx="10" cy="30" r="8" fill="none" stroke="#f59e0b" stroke-width="1.6"/>
+                <circle cx="48" cy="30" r="8" fill="none" stroke="#f59e0b" stroke-width="1.6"/>
+                <path d="M10 30 L26 12 L42 12 L48 30 M22 12 L18 24" fill="none" stroke="#f59e0b" stroke-width="1.6"/>
+                <rect x="20" y="14" width="10" height="7" rx="2" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>
+                <text x="6" y="60" font-size="7.5" fill="#fbbf24" font-family="Inter" font-weight="600">BIKE</text>
+              </g>
+
+              <g transform="translate(20, 115)">
+                <rect x="0" y="0" width="34" height="22" rx="2" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+                <rect x="34" y="6" width="20" height="16" rx="2" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+                <circle cx="8" cy="26" r="3.2" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+                <circle cx="22" cy="26" r="3.2" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+                <circle cx="46" cy="26" r="3.2" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+                <text x="8" y="46" font-size="7.5" fill="#2dd4bf" font-family="Inter" font-weight="600">TRUCK</text>
+              </g>
+
+              <g transform="translate(180, 115)">
+                <rect x="0" y="0" width="52" height="24" rx="3" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+                <rect x="4" y="5" width="9" height="8" fill="#8b5cf6" opacity="0.35"/>
+                <rect x="17" y="5" width="9" height="8" fill="#8b5cf6" opacity="0.35"/>
+                <rect x="30" y="5" width="9" height="8" fill="#8b5cf6" opacity="0.35"/>
+                <circle cx="12" cy="28" r="3.2" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+                <circle cx="40" cy="28" r="3.2" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+                <text x="12" y="46" font-size="7.5" fill="#c4b5fd" font-family="Inter" font-weight="600">BUS</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="mock-side">
+            <div class="mock-stat"><span class="mock-label">Severity</span><span class="mock-value warning">Moderate</span></div>
+            <div class="mock-stat"><span class="mock-label">Hidden Risk</span><span class="mock-value electric">72%</span></div>
+            <div class="mock-stat"><span class="mock-label">Views Analyzed</span><span class="mock-value">5 / 5</span></div>
+            <div class="mock-stat"><span class="mock-label">Repair Est.</span><span class="mock-value success">₹42,000</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="float-chip chip-1"><span class="dot dot-electric"></span> Detection: Active</div>
+      <div class="float-chip chip-2"><span class="dot dot-warning"></span> Risk Score: 72%</div>
+      <div class="float-chip chip-3"><span class="dot dot-success"></span> 5 Views Analyzed</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ METRICS ============ -->
+<section class="section-metrics container-wide" aria-label="Inspection statistics">
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11l1.5-5A2 2 0 0 1 8.4 4.5h7.2A2 2 0 0 1 17.5 6L19 11v7h-2v-2H7v2H5v-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="14" r="1.5" fill="currentColor"/><circle cx="15.5" cy="14" r="1.5" fill="currentColor"/></svg></div>
+      <div class="metric-body">
+        <div class="metric-value" data-count="1248">0</div>
+        <div class="metric-label">Vehicles Inspected</div>
+        <div class="metric-trend up">+18.4%<span> vs last month</span></div>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 12.5l2.5 2.5L16 9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="metric-body">
+        <div class="metric-value" data-count="94.7" data-decimals="1" data-suffix="%">0%</div>
+        <div class="metric-label">Damage Detection Accuracy</div>
+        <div class="metric-trend up">+3.2%<span> model improvement</span></div>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.6 4.5 4.6 1.6L13.6 10.7 12 15.2 10.4 10.7 5.8 9.1l4.6-1.6L12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
+      <div class="metric-body">
+        <div class="metric-value" data-count="327">0</div>
+        <div class="metric-label">Hidden Damage Alerts</div>
+        <div class="metric-trend up">+12.8%<span> this quarter</span></div>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15 3v5h5M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="metric-body">
+        <div class="metric-value" data-count="1086">0</div>
+        <div class="metric-label">Reports Generated</div>
+        <div class="metric-trend up">+21.5%<span> vs last month</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INSPECTION / UPLOAD ============ -->
+<section id="inspection" class="section container-wide">
+  <div class="section-head">
+    <div>
+      <h2 class="section-title">Upload Vehicle Images</h2>
+      <p class="section-sub">
+        Upload multiple views of the vehicle for comprehensive damage analysis.
+        Works with cars, bikes, trucks, buses, and commercial vehicles.
+      </p>
+    </div>
+    <div class="section-meta">
+      <span class="tag">JPG · JPEG · PNG</span>
+      <span class="tag">Max 10 MB / image</span>
+    </div>
+  </div>
+
+  <div class="upload-grid" id="uploadGrid">
+    <!-- Front -->
+    <div class="upload-card" data-view="front">
+      <input type="file" id="front" accept="image/jpeg,image/jpg,image/png" hidden />
+      <button class="camera-btn" data-view="front" aria-label="Open camera for front view" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="upload-inner">
+        <div class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11l1.5-5A2 2 0 0 1 8.4 4.5h7.2A2 2 0 0 1 17.5 6L19 11v7h-2v-2H7v2H5v-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="14" r="1.5" fill="currentColor"/><circle cx="15.5" cy="14" r="1.5" fill="currentColor"/></svg></div>
+        <div class="upload-label">Front View</div>
+        <div class="upload-hint">Drop image or click to browse</div>
+        <div class="upload-meta"><span class="file-name"></span><span class="file-size"></span></div>
+      </div>
+      <img class="upload-preview" alt="Front view preview" />
+      <div class="upload-actions">
+        <button class="mini-btn replace" data-view="front" type="button">Replace</button>
+        <button class="mini-btn remove" data-view="front" type="button">Remove</button>
+      </div>
+      <div class="upload-status"><span class="status-chip">Awaiting upload</span></div>
+    </div>
+
+    <!-- Rear -->
+    <div class="upload-card" data-view="rear">
+      <input type="file" id="rear" accept="image/jpeg,image/jpg,image/png" hidden />
+      <button class="camera-btn" data-view="rear" aria-label="Open camera for rear view" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="upload-inner">
+        <div class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11l1.5-5A2 2 0 0 1 8.4 4.5h7.2A2 2 0 0 1 17.5 6L19 11v7h-2v-2H7v2H5v-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="14" r="1.5" fill="currentColor"/><circle cx="15.5" cy="14" r="1.5" fill="currentColor"/></svg></div>
+        <div class="upload-label">Rear View</div>
+        <div class="upload-hint">Drop image or click to browse</div>
+        <div class="upload-meta"><span class="file-name"></span><span class="file-size"></span></div>
+      </div>
+      <img class="upload-preview" alt="Rear view preview" />
+      <div class="upload-actions">
+        <button class="mini-btn replace" data-view="rear" type="button">Replace</button>
+        <button class="mini-btn remove" data-view="rear" type="button">Remove</button>
+      </div>
+      <div class="upload-status"><span class="status-chip">Awaiting upload</span></div>
+    </div>
+
+    <!-- Left -->
+    <div class="upload-card" data-view="left">
+      <input type="file" id="left" accept="image/jpeg,image/jpg,image/png" hidden />
+      <button class="camera-btn" data-view="left" aria-label="Open camera for left side" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="upload-inner">
+        <div class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h12l-3-3m3 3l-3 3M15 12h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="upload-label">Left Side</div>
+        <div class="upload-hint">Drop image or click to browse</div>
+        <div class="upload-meta"><span class="file-name"></span><span class="file-size"></span></div>
+      </div>
+      <img class="upload-preview" alt="Left side preview" />
+      <div class="upload-actions">
+        <button class="mini-btn replace" data-view="left" type="button">Replace</button>
+        <button class="mini-btn remove" data-view="left" type="button">Remove</button>
+      </div>
+      <div class="upload-status"><span class="status-chip">Awaiting upload</span></div>
+    </div>
+
+    <!-- Right -->
+    <div class="upload-card" data-view="right">
+      <input type="file" id="right" accept="image/jpeg,image/jpg,image/png" hidden />
+      <button class="camera-btn" data-view="right" aria-label="Open camera for right side" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="upload-inner">
+        <div class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12H9m3-3l-3 3m3-3l3 3M9 12H3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="upload-label">Right Side</div>
+        <div class="upload-hint">Drop image or click to browse</div>
+        <div class="upload-meta"><span class="file-name"></span><span class="file-size"></span></div>
+      </div>
+      <img class="upload-preview" alt="Right side preview" />
+      <div class="upload-actions">
+        <button class="mini-btn replace" data-view="right" type="button">Replace</button>
+        <button class="mini-btn remove" data-view="right" type="button">Remove</button>
+      </div>
+      <div class="upload-status"><span class="status-chip">Awaiting upload</span></div>
+    </div>
+
+    <!-- Closeup -->
+    <div class="upload-card" data-view="closeup">
+      <input type="file" id="closeup" accept="image/jpeg,image/jpg,image/png" hidden />
+      <button class="camera-btn" data-view="closeup" aria-label="Open camera for close-up" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <div class="upload-inner">
+        <div class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <div class="upload-label">Close-Up</div>
+        <div class="upload-hint">Drop image or click to browse</div>
+        <div class="upload-meta"><span class="file-name"></span><span class="file-size"></span></div>
+      </div>
+      <img class="upload-preview" alt="Close-up preview" />
+      <div class="upload-actions">
+        <button class="mini-btn replace" data-view="closeup" type="button">Replace</button>
+        <button class="mini-btn remove" data-view="closeup" type="button">Remove</button>
+      </div>
+      <div class="upload-status"><span class="status-chip">Awaiting upload</span></div>
+    </div>
+  </div>
+
+  <div class="upload-progress">
+    <div class="up-label">
+      <span>Upload progress</span>
+      <span id="uploadProgressLabel">0 of 5 views ready</span>
+    </div>
+    <div class="up-bar"><div class="up-fill" id="uploadProgressFill"></div></div>
+  </div>
+</section>
+
+<!-- ============ IOT SENSORS ============ -->
+<section id="iot" class="section container-wide">
+  <div class="section-head">
+    <div>
+      <h2 class="section-title">IoT Accident Sensor Data</h2>
+      <p class="section-sub">
+        Use vehicle sensor information to improve accident severity and hidden-damage risk estimation.
+      </p>
+    </div>
+    <button class="btn btn-ghost small" id="simulateSensorsBtn" type="button">
+      <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M10 12a2 2 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Simulate Sensor Data
+    </button>
+  </div>
+
+  <div class="iot-grid">
+    <div class="iot-input-card">
+      <div class="iot-input-head">
+        <span class="iot-badge">Accelerometer</span>
+        <span class="iot-live"><span class="live-dot"></span> Live</span>
+      </div>
+      <label for="impact" class="iot-input-label">Impact Force</label>
+      <div class="iot-input-row">
+        <input id="impact" type="number" min="0" max="20" step="0.1" value="3.5" />
+        <span class="unit">G</span>
+      </div>
+      <div class="iot-mini-graph"><svg viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,20 10,16 20,18 30,10 40,14 50,6 60,12 70,4 80,14 90,10 100,16" fill="none" stroke="#8b5cf6" stroke-width="1.5"/></svg></div>
+    </div>
+
+    <div class="iot-input-card">
+      <div class="iot-input-head">
+        <span class="iot-badge">Gyroscope</span>
+        <span class="iot-live"><span class="live-dot"></span> Live</span>
+      </div>
+      <label for="rotation" class="iot-input-label">Rotation</label>
+      <div class="iot-input-row">
+        <input id="rotation" type="number" min="0" max="500" step="1" value="45" />
+        <span class="unit">°/s</span>
+      </div>
+      <div class="iot-mini-graph"><svg viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="0,18 10,20 20,12 30,16 40,8 50,14 60,6 70,10 80,4 90,12 100,8" fill="none" stroke="#14b8a6" stroke-width="1.5"/></svg></div>
+    </div>
+
+    <div class="iot-input-card">
+      <div class="iot-input-head">
+        <span class="iot-badge">GPS</span>
+        <span class="iot-live"><span class="live-dot"></span> Connected</span>
+      </div>
+      <label for="lat" class="iot-input-label">Latitude</label>
+      <div class="iot-input-row">
+        <input id="lat" type="number" step="0.0001" value="19.0760" />
+        <span class="unit">°</span>
+      </div>
+      <div class="iot-coord-note" id="latNote">Mumbai, IN (default)</div>
+    </div>
+
+    <div class="iot-input-card">
+      <div class="iot-input-head">
+        <span class="iot-badge">GPS</span>
+        <span class="iot-live"><span class="live-dot"></span> Connected</span>
+      </div>
+      <label for="lon" class="iot-input-label">Longitude</label>
+      <div class="iot-input-row">
+        <input id="lon" type="number" step="0.0001" value="72.8770" />
+        <span class="unit">°</span>
+      </div>
+      <div class="iot-coord-note" id="lonNote">Last updated: just now</div>
+    </div>
+  </div>
+
+  <div class="location-bar">
+    <button class="btn btn-primary small" id="detectLocationBtn" type="button">
+      <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      📍 Detect My Location
+    </button>
+    <button class="btn btn-ghost small" id="clearLocationBtn" type="button">Clear</button>
+    <span class="location-status" id="locationStatus"></span>
+  </div>
+
+  <div class="iot-sensor-row">
+    <div class="iot-sensor">
+      <div class="iot-sensor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M6 8l6-5 6 5M6 16l6 5 6-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="iot-sensor-body"><div class="iot-sensor-title">Impact Sensor</div><div class="iot-sensor-value">3.5 G</div></div>
+      <span class="iot-sensor-status ok">OK</span>
+    </div>
+    <div class="iot-sensor">
+      <div class="iot-sensor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="iot-sensor-body"><div class="iot-sensor-title">Rotation Sensor</div><div class="iot-sensor-value">45 °/s</div></div>
+      <span class="iot-sensor-status ok">OK</span>
+    </div>
+    <div class="iot-sensor">
+      <div class="iot-sensor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
+      <div class="iot-sensor-body"><div class="iot-sensor-title">GPS Lock</div><div class="iot-sensor-value">12 satellites</div></div>
+      <span class="iot-sensor-status ok">Strong</span>
+    </div>
+    <div class="iot-sensor">
+      <div class="iot-sensor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h4l2-4 4 8 2-4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="iot-sensor-body"><div class="iot-sensor-title">Stream Rate</div><div class="iot-sensor-value">20 Hz</div></div>
+      <span class="iot-sensor-status ok">Stable</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ANALYSIS ============ -->
+<section id="analysis" class="section container-wide">
+  <div class="analysis-panel">
+    <div class="analysis-info">
+      <h2 class="section-title">Damage Analysis</h2>
+      <p class="section-sub">
+        Run the pipeline: detection, classification, severity estimation,
+        multi-view fusion, hidden-damage prediction, and repair recommendation.
+      </p>
+    </div>
+
+    <div class="analysis-actions">
+      <button id="analyzeBtn" class="btn btn-primary large" type="button">
+        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M13 2L4.5 14H11l-1 8L19.5 10H13l0-8z" fill="currentColor"/></svg>
+        Analyze Vehicle Damage
+      </button>
+      <button id="resetBtn" class="btn btn-ghost large" type="button">
+        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6M5 10a7 7 0 0 1 12.2-3.5L20 10M19 14a7 7 0 0 1-12.2 3.5L4 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Reset Inspection
+      </button>
+    </div>
+
+    <div class="analysis-status">
+      <p id="status" class="status-text">Ready to analyze.</p>
+      <div id="analysisSteps" class="analysis-steps">
+        <div class="step" data-step="1"><span class="step-dot"></span> Upload validation</div>
+        <div class="step" data-step="2"><span class="step-dot"></span> Image preprocessing</div>
+        <div class="step" data-step="3"><span class="step-dot"></span> Damage detection</div>
+        <div class="step" data-step="4"><span class="step-dot"></span> Damage classification</div>
+        <div class="step" data-step="5"><span class="step-dot"></span> Severity estimation</div>
+        <div class="step" data-step="6"><span class="step-dot"></span> Multi-view fusion</div>
+        <div class="step" data-step="7"><span class="step-dot"></span> Hidden-damage prediction</div>
+        <div class="step" data-step="8"><span class="step-dot"></span> Repair recommendation</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section id="results" class="section container-wide hidden" aria-live="polite">
+  <div class="section-head">
+    <div>
+      <h2 class="section-title">Vehicle Damage Assessment</h2>
+      <p class="section-sub">Damage, risk, repair, and cost analysis for the uploaded views.</p>
+    </div>
+    <div class="section-meta">
+      <span class="tag" id="resultsTimestamp">Generated just now</span>
+    </div>
+  </div>
+
+  <div class="results-grid">
+    <div class="result-card">
+      <div class="result-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <h3 class="result-title">Damage Summary</h3>
+      <div class="result-row"><span>Dominant Damage</span><strong id="dominant">—</strong></div>
+      <div class="result-row"><span>Fused Severity</span><strong id="fusedSeverity">—</strong></div>
+      <div class="result-row"><span>Total Detections</span><strong id="numDetections">—</strong></div>
+      <div class="result-row"><span>Views Analyzed</span><strong id="numViews">—</strong></div>
+    </div>
+
+    <div class="result-card risk-card" id="riskCard">
+      <div class="result-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2L12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg></div>
+      <h3 class="result-title">Hidden Damage Risk</h3>
+      <div class="risk-head">
+        <div class="risk-badge" id="riskLevel">—</div>
+        <div class="risk-score-display"><span id="riskScore">—</span></div>
+      </div>
+      <div class="risk-bar"><div class="risk-fill" id="riskFill"></div></div>
+      <p class="risk-rec" id="riskRec">—</p>
+      <div class="risk-gauge" aria-hidden="true">
+        <svg viewBox="0 0 120 70">
+          <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="#2a2350" stroke-width="8" stroke-linecap="round"/>
+          <path id="riskGaugePath" d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="url(#riskGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157"/>
+          <defs>
+            <linearGradient id="riskGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#22c55e"/>
+              <stop offset="50%" stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#ef4444"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l4 4-9 9H5v-4l9-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 7l4 4" stroke="currentColor" stroke-width="1.8"/></svg></div>
+      <h3 class="result-title">Recommended Repair</h3>
+      <div class="result-row"><span>Action</span><strong id="repairAction">—</strong></div>
+      <div class="result-row"><span>Component</span><strong id="component">—</strong></div>
+      <p class="repair-desc" id="repairDesc">—</p>
+    </div>
+
+    <div class="result-card">
+      <div class="result-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 7h6a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <h3 class="result-title">Estimated Repair Cost</h3>
+      <div class="cost-range" id="costRange">—</div>
+      <div class="result-row small"><span>Currency</span><strong id="currency">INR</strong></div>
+      <div class="cost-breakdown">
+        <div class="cost-line"><span>Parts</span><strong id="costParts">—</strong></div>
+        <div class="cost-line"><span>Labor</span><strong id="costLabor">—</strong></div>
+        <div class="cost-line"><span>Inspection Fee</span><strong id="costInspection">—</strong></div>
+        <div class="cost-line"><span>Confidence</span><strong id="costConfidence">—</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Damage Class Distribution</h3>
+      <p class="panel-sub">Detected damage categories across all analyzed views.</p>
+    </div>
+    <div id="classDist" class="class-dist"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Multi-View Damage Analysis</h3>
+      <p class="panel-sub">Click any image to open a larger preview.</p>
+    </div>
+    <div id="annotated" class="annotated-grid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Confidence Analytics</h3>
+      <p class="panel-sub">Higher confidence indicates stronger agreement between the model and available vehicle views.</p>
+    </div>
+    <div class="confidence-grid">
+      <div class="confidence-ring" data-value="94.7">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#2a2350" stroke-width="8"/>
+          <circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="#8b5cf6" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" transform="rotate(-90 50 50)"/>
+        </svg>
+        <div class="conf-text"><strong>94.7%</strong><span>Detection</span></div>
+      </div>
+      <div class="confidence-ring" data-value="91.3">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#2a2350" stroke-width="8"/>
+          <circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="#a78bfa" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" transform="rotate(-90 50 50)"/>
+        </svg>
+        <div class="conf-text"><strong>91.3%</strong><span>Classification</span></div>
+      </div>
+      <div class="confidence-ring" data-value="89.8">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#2a2350" stroke-width="8"/>
+          <circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="#22c55e" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" transform="rotate(-90 50 50)"/>
+        </svg>
+        <div class="conf-text"><strong>89.8%</strong><span>Severity</span></div>
+      </div>
+      <div class="confidence-ring" data-value="93.1">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#2a2350" stroke-width="8"/>
+          <circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="#14b8a6" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" transform="rotate(-90 50 50)"/>
+        </svg>
+        <div class="conf-text"><strong>93.1%</strong><span>Fusion</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Vehicle Damage Heatmap</h3>
+      <p class="panel-sub">Highlighted areas indicate damage intensity per component.</p>
+    </div>
+    <div class="heatmap-wrap">
+      <div id="heatmapContainer" data-vehicle="car_sedan">
+        <!-- SVG injected by JavaScript -->
+      </div>
+      <div class="heatmap-legend">
+        <span><i class="sw low"></i> Low</span>
+        <span><i class="sw moderate"></i> Moderate</span>
+        <span><i class="sw severe"></i> Severe</span>
+        <span><i class="sw critical"></i> Critical</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Repair Recommendation Breakdown</h3>
+      <p class="panel-sub">Structured planning guidance for the inspection workflow.</p>
+    </div>
+    <div class="repair-grid">
+      <div class="repair-block">
+        <h4>Immediate Actions</h4>
+        <ul id="rbImmediate"><li>Pending analysis</li></ul>
+      </div>
+      <div class="repair-block">
+        <h4>Recommended Repairs</h4>
+        <ul id="rbRepairs"><li>Pending analysis</li></ul>
+      </div>
+      <div class="repair-block">
+        <h4>Parts</h4>
+        <ul id="rbParts"><li>Pending analysis</li></ul>
+      </div>
+      <div class="repair-block">
+        <h4>Estimated Labor</h4>
+        <div class="repair-price" id="rbLabor">—</div>
+      </div>
+      <div class="repair-block">
+        <h4>Estimated Parts</h4>
+        <div class="repair-price" id="rbPartsPrice">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel shops-panel" id="shopsPanel">
+    <div class="panel-head">
+      <h3>Nearby Repair Shops</h3>
+      <span class="status-ready" id="shopsStatus">Locating…</span>
+    </div>
+    <p class="panel-sub">Recommended repair shops near the accident location based on vehicle type and damage severity.</p>
+    <div id="shopsList" class="shops-list">
+      <p class="muted">Loading nearby shops…</p>
+    </div>
+  </div>
+
+  <div class="panel insurance-panel">
+    <div class="panel-head">
+      <h3>Insurance Assessment Summary</h3>
+      <span class="status-ready">Assessment Ready</span>
+    </div>
+    <div class="insurance-grid">
+      <div class="ins-row"><span>Inspection ID</span><strong id="insId">—</strong></div>
+      <div class="ins-row"><span>Vehicle Type</span><strong id="insVehicle">—</strong></div>
+      <div class="ins-row"><span>Inspection date</span><strong id="insDate">—</strong></div>
+      <div class="ins-row"><span>Number of images</span><strong id="insImages">—</strong></div>
+      <div class="ins-row"><span>Damage severity</span><strong id="insSeverity">—</strong></div>
+      <div class="ins-row"><span>Hidden damage risk</span><strong id="insRisk">—</strong></div>
+      <div class="ins-row"><span>Estimated repair cost</span><strong id="insCost">—</strong></div>
+      <div class="ins-row"><span>Recommended action</span><strong id="insAction">—</strong></div>
+    </div>
+    <div class="insurance-actions">
+      <button class="btn btn-primary" id="generateInsBtn" type="button">Generate Insurance Report</button>
+      <button class="btn btn-ghost" id="downloadInsBtn" type="button">Download Assessment</button>
+      <button class="btn btn-ghost" id="shareInsBtn" type="button">Share Report</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Generate Inspection Report</h3>
+      <p class="panel-sub">Select the sections to include in the exported report.</p>
+    </div>
+    <div class="report-options">
+      <label class="check"><input type="checkbox" checked /> Damage Summary</label>
+      <label class="check"><input type="checkbox" checked /> Annotated Images</label>
+      <label class="check"><input type="checkbox" checked /> IoT Sensor Data</label>
+      <label class="check"><input type="checkbox" checked /> Hidden Damage Risk</label>
+      <label class="check"><input type="checkbox" checked /> Repair Recommendation</label>
+      <label class="check"><input type="checkbox" checked /> Cost Estimate</label>
+      <label class="check"><input type="checkbox" checked /> Insurance Summary</label>
+    </div>
+    <div class="report-actions">
+      <button class="btn btn-primary" id="reportBtn" type="button">
+        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download PDF Report
+      </button>
+      <button class="btn btn-ghost" id="jsonBtn" type="button">Download JSON</button>
+      <button class="btn btn-ghost" id="printBtn" type="button">Print Report</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HISTORY ============ -->
+<section id="reports" class="section container-wide">
+  <div class="section-head">
+    <div>
+      <h2 class="section-title">Inspection History</h2>
+      <p class="section-sub">Recent inspections and their assessments.</p>
+    </div>
+    <div class="history-filters">
+      <input type="search" id="histSearch" placeholder="Search ID, vehicle, damage…" />
+      <select id="histFilter">
+        <option value="">All severities</option>
+        <option value="minor">Minor</option>
+        <option value="moderate">Moderate</option>
+        <option value="severe">Severe</option>
+        <option value="critical">Critical</option>
+      </select>
+    </div>
+  </div>
+  <div class="history-wrap">
+    <table class="history-table" id="historyTable">
+      <thead>
+        <tr>
+          <th data-sort="id">Inspection ID</th>
+          <th data-sort="date">Date</th>
+          <th data-sort="vehicle">Vehicle</th>
+          <th data-sort="damage">Damage</th>
+          <th data-sort="severity">Severity</th>
+          <th data-sort="risk">Risk</th>
+          <th data-sort="cost">Estimated Cost</th>
+          <th data-sort="status">Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="history-pagination">
+    <button class="link" disabled>← Prev</button>
+    <span>Page 1 of 1</span>
+    <button class="link" disabled>Next →</button>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="about" class="section container-wide">
+  <div class="section-head center">
+    <h2 class="section-title">Built for Modern Vehicle Inspection</h2>
+    <p class="section-sub">A complete workflow that spans detection, risk estimation, and reporting.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.4" opacity="0.4"/></svg></div><h3>Multi-View Detection</h3><p>Analyze front, rear, left, right, and close-up images with consistent detection.</p><a href="#" class="learn-more">Learn more →</a></div>
+    <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c2-4 6-8 12-8 3 0 4 1 4 3s-2 6-8 9c-3 1.5-6 1-8-4z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div><h3>Deep Learning</h3><p>Modern computer-vision models such as YOLO for damage detection and classification.</p><a href="#" class="learn-more">Learn more →</a></div>
+    <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 4v5c0 5-4 9-9 9-5 0-9-4-9-9V7l9-4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Hidden Damage Prediction</h3><p>Estimate the possibility of damage that may not be visible in the uploaded images.</p><a href="#" class="learn-more">Learn more →</a></div>
+    <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0M11 12a1 1 0 0 1 2 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>IoT Integration</h3><p>Combine impact, rotation, and GPS information to provide richer accident context.</p><a href="#" class="learn-more">Learn more →</a></div>
+    <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l4 4-9 9H5v-4l9-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Intelligent Repair Recommendation</h3><p>Suggest appropriate repair or replacement actions based on damage and severity.</p><a href="#" class="learn-more">Learn more →</a></div>
+    <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 3v5h5M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Insurance Report Generation</h3><p>Structured reports ready for inspection and insurance claim processing.</p><a href="#" class="learn-more">Learn more →</a></div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how" class="section container-wide">
+  <div class="section-head center">
+    <h2 class="section-title">How the System Works</h2>
+    <p class="section-sub">Five connected steps that turn vehicle images and sensor data into a report.</p>
+  </div>
+  <div class="how-grid">
+    <div class="how-step"><div class="how-num">01</div><h4>Upload</h4><p>Upload vehicle images from multiple views.</p></div>
+    <div class="how-step"><div class="how-num">02</div><h4>Detect</h4><p>Deep learning identifies visible vehicle damage.</p></div>
+    <div class="how-step"><div class="how-num">03</div><h4>Fuse</h4><p>Combine results from multiple vehicle views.</p></div>
+    <div class="how-step"><div class="how-num">04</div><h4>Predict</h4><p>Estimate severity and hidden-damage risk using image and IoT data.</p></div>
+    <div class="how-step"><div class="how-num">05</div><h4>Recommend</h4><p>Generate repair recommendations and cost estimates.</p></div>
+  </div>
+</section>
+
+<!-- ============ TIMELINE ============ -->
+<section class="section container-wide">
+  <div class="section-head center">
+    <h2 class="section-title">Accident Severity Timeline</h2>
+    <p class="section-sub">Hover any step to see what the pipeline is doing.</p>
+  </div>
+  <div class="timeline">
+    <div class="tl-step" data-info="Accelerometer and gyroscope capture impact magnitude and rotation."><span class="tl-dot"></span><span class="tl-label">Sensor Impact</span></div>
+    <div class="tl-step" data-info="YOLO-based detector identifies damaged regions in every view."><span class="tl-dot"></span><span class="tl-label">Image Detection</span></div>
+    <div class="tl-step" data-info="Damage type classification (scratch, dent, crack, glass, etc.)."><span class="tl-dot"></span><span class="tl-label">Damage Classification</span></div>
+    <div class="tl-step" data-info="Severity model scores visible damage per view."><span class="tl-dot"></span><span class="tl-label">Severity Estimation</span></div>
+    <div class="tl-step" data-info="Fusion of severity score and IoT data estimates hidden damage risk."><span class="tl-dot"></span><span class="tl-label">Hidden Damage Prediction</span></div>
+    <div class="tl-step" data-info="Repair action, parts, and cost range recommendation."><span class="tl-dot"></span><span class="tl-label">Repair Recommendation</span></div>
+    <div class="tl-step" data-info="Report assembled in PDF/JSON for inspection and insurance."><span class="tl-dot"></span><span class="tl-label">Insurance Report</span></div>
+  </div>
+  <div class="timeline-info" id="timelineInfo">Hover a step to see more information.</div>
+</section>
+
+<!-- ============ TECH STACK ============ -->
+<section class="section container-wide">
+  <div class="section-head center">
+    <h2 class="section-title">Technology Stack</h2>
+    <p class="section-sub">Built on an open, modular stack for reliable deployment.</p>
+  </div>
+  <div class="tech-grid">
+    <div class="tech-card"><h4>Frontend</h4><ul><li>HTML5</li><li>CSS3</li><li>JavaScript</li><li>Tailwind CSS</li></ul></div>
+    <div class="tech-card"><h4>Backend</h4><ul><li>Python</li><li>Flask</li><li>REST API</li></ul></div>
+    <div class="tech-card"><h4>AI / ML</h4><ul><li>YOLO</li><li>OpenCV</li><li>PyTorch</li><li>scikit-learn</li></ul></div>
+    <div class="tech-card"><h4>IoT</h4><ul><li>Accelerometer</li><li>Gyroscope</li><li>GPS</li></ul></div>
+    <div class="tech-card"><h4>Data</h4><ul><li>SQLite</li><li>JSON</li><li>ReportLab PDF</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="section container-wide">
+  <div class="section-head center">
+    <h2 class="section-title">Frequently Asked Questions</h2>
+  </div>
+  <div class="faq">
+    <details><summary>What types of vehicle damage can the system detect?</summary><p>The system is designed to detect common visible vehicle damage such as dents, scratches, cracks, bumper damage, glass damage, and other component-level damage depending on the trained model and available views.</p></details>
+    <details><summary>Why should I upload multiple vehicle views?</summary><p>Multiple views provide broader visual coverage and help the system combine evidence from different perspectives. Damage visible in one view might be partially obscured in another.</p></details>
+    <details><summary>What is hidden-damage risk?</summary><p>Hidden-damage risk is an estimate of the possibility of damage that may not be directly visible from the uploaded images, especially when impact sensor information indicates significant force.</p></details>
+    <details><summary>How does IoT data improve the analysis?</summary><p>Impact and motion-related sensor information provides additional accident context. Combined with visible damage, it helps the system estimate severity and hidden damage risk more reliably.</p></details>
+    <details><summary>How is repair cost estimated?</summary><p>The displayed cost is a system-generated approximation based on detected damage, component, severity, and repair action. It does not replace a professional quotation.</p></details>
+    <details><summary>Can the system generate an insurance report?</summary><p>Yes. The system organizes detection results, severity, hidden-damage risk, images, sensor data, and repair estimates into a structured inspection report.</p></details>
+    <details><summary>Can the system guarantee that no hidden damage exists?</summary><p>No. The system provides a risk estimate and does not replace professional mechanical inspection. Always have significant damage confirmed by a qualified technician.</p></details>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="section container-wide">
+  <div class="section-head center"><h2 class="section-title">What Users Say</h2></div>
+  <div class="testimonials">
+    <blockquote class="testi"><p>"Multi-view analysis helps organize the evidence I need before approving a claim. The hidden-damage indicator is a useful extra signal."</p><footer><strong>Riya Malhotra</strong><span>Insurance Inspector</span></footer></blockquote>
+    <blockquote class="testi"><p>"The repair recommendation gets me started faster. I still inspect manually, but the component-level view is a solid head start."</p><footer><strong>Marcus Chen</strong><span>Automotive Technician</span></footer></blockquote>
+    <blockquote class="testi"><p>"We run inspections across a fleet of 40 vehicles. The dashboard saves us hours of paperwork per week."</p><footer><strong>Priya Iyer</strong><span>Fleet Manager</span></footer></blockquote>
+    <blockquote class="testi"><p>"It's clear, easy to understand, and the report explains what was found. Much better than trying to interpret raw images."</p><footer><strong>Daniel Roberts</strong><span>Vehicle Owner</span></footer></blockquote>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="section container-wide">
+  <div class="section-head center">
+    <h2 class="section-title">Inspection Plans</h2>
+    <p class="section-sub">Choose a tier that fits your workflow.</p>
+    <div class="billing-toggle">
+      <button class="bill-btn active" data-bill="monthly" type="button">Monthly</button>
+      <button class="bill-btn" data-bill="yearly" type="button">Yearly <span class="save">−20%</span></button>
+    </div>
+  </div>
+  <div class="pricing-grid">
+    <div class="price-card"><h3>Basic</h3><p class="price-sub">For individual vehicle inspections.</p><div class="price"><span class="amount" data-monthly="₹499" data-yearly="₹399">₹499</span><span class="per">/month</span></div><ul><li>Multi-view upload</li><li>Damage detection</li><li>Basic severity analysis</li><li>Basic report</li></ul><button class="btn btn-ghost full" type="button">Get Started</button></div>
+    <div class="price-card featured"><div class="ribbon">Most Popular</div><h3>Professional</h3><p class="price-sub">For detailed vehicle assessment.</p><div class="price"><span class="amount" data-monthly="₹1,499" data-yearly="₹1,199">₹1,499</span><span class="per">/month</span></div><ul><li>Everything in Basic</li><li>Hidden-damage risk</li><li>IoT sensor integration</li><li>Repair recommendations</li><li>Advanced reports</li></ul><button class="btn btn-primary full" type="button">Choose Professional</button></div>
+    <div class="price-card"><h3>Enterprise</h3><p class="price-sub">For fleet and insurance workflows.</p><div class="price"><span class="amount" data-monthly="Custom" data-yearly="Custom">Custom</span></div><ul><li>Everything in Professional</li><li>Inspection history</li><li>Fleet dashboard</li><li>Advanced analytics</li><li>API integration</li><li>Custom reporting</li></ul><button class="btn btn-ghost full" type="button">Contact Sales</button></div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta-section container-wide">
+  <div class="cta-panel">
+    <h2>Ready to Analyze Vehicle Damage?</h2>
+    <p>Upload multiple vehicle views and let the inspection workflow organize the damage assessment.</p>
+    <div class="cta-actions">
+      <a href="#inspection" class="btn btn-primary large">Start New Inspection</a>
+      <a href="#" class="btn btn-ghost large">View Documentation</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="footer-grid container-wide">
+    <div class="footer-brand">
+      <div class="brand">
+        <svg viewBox="0 0 40 40" class="brand-logo" aria-hidden="true">
+          <path d="M20 3 L34 9 v10 c0 9-6 15-14 18 C12 34 6 28 6 19 V9 Z" fill="none" stroke="#8b5cf6" stroke-width="1.6"/>
+          <path d="M10 22 l1.5-4 a2 2 0 0 1 2-1.5 h6 a2 2 0 0 1 2 1.5 l1.5 4 v3 h-2 v-1 H12 v1 h-2 z" fill="#8b5cf6"/>
+          <circle cx="26" cy="25" r="3" fill="none" stroke="#a78bfa" stroke-width="1.4"/>
+          <circle cx="32" cy="25" r="3" fill="none" stroke="#a78bfa" stroke-width="1.4"/>
+        </svg>
+        <span class="brand-name">Vehicle <span class="text-electric-400">Damage</span> Analysis</span>
+      </div>
+      <p class="footer-tagline">Multi-vehicle damage assessment with multi-view analysis, IoT sensor fusion, and structured reporting. Supports cars, bikes, trucks, buses, and commercial vehicles.</p>
+      <div class="socials">
+        <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.2-1.5-1.2-1.5-1-.7.1-.7.1-.7 1 .1 1.6 1.1 1.6 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z" fill="currentColor"/></svg></a>
+        <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4v16H4zM10 9h4v2a4 4 0 0 1 4-2c3 0 4 2 4 5v6h-4v-5c0-1.5-.5-2.5-2-2.5S14 13.5 14 15v5h-4V9z" fill="currentColor"/></svg></a>
+        <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12s0-3.5-.5-5c-.3-1-1-1.7-2-2C17.5 4.5 12 4.5 12 4.5s-5.5 0-7.5.5c-1 .3-1.7 1-2 2C2 8.5 2 12 2 12s0 3.5.5 5c.3 1 1 1.7 2 2 2 .5 7.5.5 7.5.5s5.5 0 7.5-.5c1-.3 1.7-1 2-2 .5-1.5.5-5 .5-5zM10 15V9l5 3-5 3z" fill="currentColor"/></svg></a>
+        <a href="#" aria-label="Email"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l9 6 9-6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 6h18l-9 7L3 6z" fill="currentColor"/></svg></a>
+      </div>
+    </div>
+
+    <div class="footer-col"><h4>Product</h4><ul><li><a href="#dashboard">Dashboard</a></li><li><a href="#inspection">Inspection</a></li><li><a href="#analysis">Damage Analysis</a></li><li><a href="#reports">Reports</a></li><li><a href="#iot">IoT Sensors</a></li></ul></div>
+    <div class="footer-col"><h4>Features</h4><ul><li><a href="#">Multi-View Detection</a></li><li><a href="#">Hidden Damage Risk</a></li><li><a href="#">Repair Recommendation</a></li><li><a href="#">Cost Estimation</a></li><li><a href="#">Insurance Reports</a></li></ul></div>
+    <div class="footer-col"><h4>Resources</h4><ul><li><a href="#">Documentation</a></li><li><a href="#">API</a></li><li><a href="#">FAQ</a></li><li><a href="#">User Guide</a></li><li><a href="#">Support</a></li></ul></div>
+    <div class="footer-col"><h4>Company</h4><ul><li><a href="#">About</a></li><li><a href="#">Project</a></li><li><a href="#">Contact</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
+
+    <div class="footer-news">
+      <h4>Get Vehicle Updates</h4>
+      <form id="newsletterForm" class="news-form" onsubmit="return false;">
+        <input type="email" id="newsletterEmail" placeholder="Enter your email" aria-label="Email address" required />
+        <button class="btn btn-primary small" type="submit">Subscribe</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="footer-bottom container-wide">
+    <p>© 2026 Vehicle Damage Analysis. Multi-Vehicle Deep Learning + IoT Inspection Platform.</p>
+    <p class="footer-note">Estimates and recommendations are system-generated and do not replace professional inspection.</p>
+  </div>
+</footer>
+
+<!-- ============ MODALS ============ -->
+
+<!-- Auth Modal -->
+<div id="authModal" class="camera-modal hidden" role="dialog" aria-modal="true">
+  <div class="camera-dialog" style="max-width:420px;">
+    <div class="camera-header">
+      <h3 id="authTitle">Sign In</h3>
+      <button id="closeAuthBtn" class="close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div class="input-group" style="margin-bottom:12px;">
+        <label style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;display:block;">Username</label>
+        <input id="authUsername" type="text" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;" />
+      </div>
+      <div class="input-group" style="margin-bottom:16px;">
+        <label style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;display:block;">Password</label>
+        <input id="authPassword" type="password" style="width:100%;padding:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;" />
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-ghost small" id="authToggleBtn" type="button">Switch to Register</button>
+        <button class="btn btn-primary small" id="authSubmitBtn" type="button">Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Camera Modal -->
+<div id="cameraModal" class="camera-modal hidden" role="dialog" aria-modal="true" aria-labelledby="cameraTitle">
+  <div class="camera-dialog">
+    <div class="camera-header">
+      <h3 id="cameraTitle">Capture Photo</h3>
+      <button id="closeCameraBtn" class="close-btn" type="button" aria-label="Close camera">✕</button>
+    </div>
+    <div class="camera-body">
+      <video id="cameraVideo" autoplay playsinline muted></video>
+      <canvas id="cameraCanvas" hidden></canvas>
+      <img id="snapshotPreview" hidden alt="snapshot" />
+      <div class="camera-error hidden" id="cameraError"></div>
+    </div>
+    <div class="camera-controls">
+      <button id="switchCameraBtn" class="btn btn-ghost small" type="button">Switch Camera</button>
+      <button id="captureBtn" class="btn btn-primary small" type="button">Capture</button>
+      <button id="retakeBtn" class="btn btn-ghost small hidden" type="button">Retake</button>
+      <button id="usePhotoBtn" class="btn btn-primary small hidden" type="button">Use Photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Image preview">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close preview">✕</button>
+  <img id="lightboxImg" alt="Enlarged preview" />
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<button id="backToTop" class="back-to-top" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
+<script src="script.js"></script>
+</body>
+</html>

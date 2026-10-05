@@ -1,0 +1,129 @@
+{
+  "annotated_images": {
+    "front": "D:\\Vehicle Damage Analysis\\results\\front_b8f976d72d464d22ae893ccdfd795594.jpg",
+    "left": "D:\\Vehicle Damage Analysis\\results\\left_b71181c527d345abba132800ca946636.jpg",
+    "rear": "D:\\Vehicle Damage Analysis\\results\\rear_b684ed58a60742cca7576c35bf9257a1.jpg"
+  },
+  "component": "front_bumper",
+  "cost": {
+    "action": "repaint",
+    "cost_max": 5993,
+    "cost_min": 4075,
+    "currency": "INR",
+    "vehicle_type": "bike"
+  },
+  "fusion": {
+    "class_distribution": {
+      "scratch": 1
+    },
+    "dominant_damage": "scratch",
+    "fused_detections": [
+      {
+        "area": 4275,
+        "bbox": [
+          121,
+          217,
+          213,
+          273
+        ],
+        "class": "scratch",
+        "confidence": 0.45,
+        "view": "rear",
+        "weight": 1
+      }
+    ],
+    "fused_severity_score": 0.067,
+    "num_views": 3
+  },
+  "hidden_damage": {
+    "inspection_recommendation": "No immediate hidden damage concern.",
+    "risk_level": "low",
+    "risk_score": 0.232
+  },
+  "inspection_id": null,
+  "repair": {
+    "action": "repaint",
+    "damage_class": "scratch",
+    "description": "Surface repainting required.",
+    "severity": "minor"
+  },
+  "sensor": {
+    "impact_g": 3.5,
+    "location": {
+      "lat": 16.353438,
+      "lon": 81.042167
+    },
+    "obd_errors": 0,
+    "rotation_dps": 45
+  },
+  "severity_label": "Minor",
+  "severity_score": 7,
+  "vehicle_type": "bike",
+  "views": {
+    "front": {
+      "detections": [],
+      "evidence": {
+        "evidence_id": "EV-5EC59D6270",
+        "filename": "434011d2a5314c78b9d4a2374585a2cb.jpg",
+        "inspection_id": null,
+        "sha256": "4ad5244cb6e1bf4d2a1ac02d209a326721215ab9e5c4abee3c6436d4e88799a1",
+        "size_bytes": 45612,
+        "uploaded_at": "2026-10-05T11:09:39.626460Z",
+        "uploader": "anonymous"
+      },
+      "image_path": "D:\\Vehicle Damage Analysis\\uploads\\434011d2a5314c78b9d4a2374585a2cb.jpg",
+      "severity": {
+        "score": 0,
+        "severity": "none"
+      }
+    },
+    "left": {
+      "detections": [],
+      "evidence": {
+        "evidence_id": "EV-5436369E3F",
+        "filename": "140070f4235f4bd5b10d638ef884e191.jpg",
+        "inspection_id": null,
+        "sha256": "6985453809989f7b6e705825a4f91aac67f745a6140350611a07c15746fd3402",
+        "size_bytes": 88413,
+        "uploaded_at": "2026-10-05T11:09:39.826396Z",
+        "uploader": "anonymous"
+      },
+      "image_path": "D:\\Vehicle Damage Analysis\\uploads\\140070f4235f4bd5b10d638ef884e191.jpg",
+      "severity": {
+        "score": 0,
+        "severity": "none"
+      }
+    },
+    "rear": {
+      "detections": [
+        {
+          "area": 4275,
+          "bbox": [
+            121,
+            217,
+            213,
+            273
+          ],
+          "class": "scratch",
+          "confidence": 0.45
+        }
+      ],
+      "evidence": {
+        "evidence_id": "EV-6BD237AF49",
+        "filename": "600a179ed39148f4851875a4e89998d3.jpg",
+        "inspection_id": null,
+        "sha256": "a676c72a9a9412ca7e61a4d67a277bf0e56cbee45d1ea5bc9762f16e1ec66f12",
+        "size_bytes": 42164,
+        "uploaded_at": "2026-10-05T11:09:39.759186Z",
+        "uploader": "anonymous"
+      },
+      "image_path": "D:\\Vehicle Damage Analysis\\uploads\\600a179ed39148f4851875a4e89998d3.jpg",
+      "severity": {
+        "area_ratio": 0.0351,
+        "num_damages": 1,
+        "score": 0.193,
+        "severity": "minor"
+      }
+    }
+  }
+}
